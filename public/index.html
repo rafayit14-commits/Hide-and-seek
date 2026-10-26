@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Hide and Seek</title>
+  <meta name="theme-color" content="#0b0f14">
+  <meta name="description" content="GPS hide and seek with a shrinking zone">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Hide&amp;Seek">
+  <link rel="stylesheet" href="lib/leaflet.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- HOME -->
+  <section id="home" class="screen">
+    <div class="hero">
+      <div class="logo">HIDE<span>&amp;</span>SEEK</div>
+      <p class="tag">Run. Hide. Stay in the zone.</p>
+    </div>
+    <div class="card">
+      <label>Your name<input id="in-name" maxlength="20" autocomplete="nickname" placeholder="e.g. Rafa"></label>
+      <button id="btn-create" class="btn">Create room</button>
+      <div class="or"><span>or join one</span></div>
+      <div class="row">
+        <input id="in-code" maxlength="5" placeholder="CODE" autocapitalize="characters" class="code-in">
+        <button id="btn-join" class="btn btn-alt">Join</button>
+      </div>
+    </div>
+    <details class="card rules">
+      <summary>How it works</summary>
+      <p>Everyone joins a room. When the host starts, hunters are picked at random. Runners get a head start to hide.</p>
+      <p>Every few minutes the hunters receive every runner's location. The zone shrinks on a timer, and the next zone is shown dashed on the map. A runner who stays outside the zone longer than the grace time is disqualified.</p>
+      <p>Hunters win if every runner is out. Runners win if anyone survives until the clock runs out.</p>
+      <p class="muted">Keep the app open with the screen on while you play, so your phone keeps sending your location.</p>
+    </details>
+    <button id="btn-install" class="btn btn-ghost" hidden>Install app</button>
+  </section>
+
+  <!-- LOBBY -->
+  <section id="lobby" class="screen" hidden>
+    <div class="card code-card">
+      <div class="muted small">ROOM CODE</div>
+      <div id="lobby-code" class="big-code">-----</div>
+      <button id="btn-share" class="btn btn-small btn-alt">Share invite</button>
+    </div>
+    <div class="card">
+      <h2>Players <span id="lobby-count" class="pill">0</span></h2>
+      <ul id="lobby-players" class="plist"></ul>
+    </div>
+    <div class="card">
+      <h2>Rules</h2>
+      <form id="settings" class="grid">
+        <label>Hunters<input type="number" name="hunters" min="1" max="20" step="1"></label>
+        <label>Head start (min)<input type="number" name="headStartMin" min="0" max="60" step="any"></label>
+        <label>Reveal every (min)<input type="number" name="revealEveryMin" min="0.1" max="120" step="any"></label>
+        <label>Zone size (km)<input type="number" name="zoneKm" min="0.05" max="100" step="any"></label>
+        <label>Shrink every (min)<input type="number" name="shrinkEveryMin" min="0.1" max="120" step="any"></label>
+        <label>Shrink by (%)<input type="number" name="shrinkPct" min="1" max="90" step="1"></label>
+        <label>Smallest zone (m)<input type="number" name="minZoneM" min="10" max="10000" step="10"></label>
+        <label>Grace outside (min)<input type="number" name="graceMin" min="0.1" max="60" step="any"></label>
+        <label>Game length (min)<input type="number" name="gameMin" min="1" max="1440" step="any"></label>
+      </form>
+    </div>
+    <div class="card">
+      <h2>Zone center</h2>
+      <p id="center-hint" class="muted small"></p>
+      <div id="lobby-map" class="map-box"></div>
+      <button id="btn-center-me" class="btn btn-small btn-alt">Use my location</button>
+    </div>
+    <div class="sticky-actions">
+      <button id="btn-start" class="btn">Start game</button>
+      <p id="wait-host" class="muted center" hidden>Waiting for the host to start…</p>
+      <button id="btn-leave" class="btn btn-ghost btn-small">Leave room</button>
+    </div>
+  </section>
+
+  <!-- GAME -->
+  <section id="game" class="screen game" hidden>
+    <div id="map" class="map-full"></div>
+    <div class="hud">
+      <div class="hud-top">
+        <span id="role-badge" class="badge">RUNNER</span>
+        <span id="gps-badge" class="badge gps">GPS…</span>
+      </div>
+      <div id="timers" class="timers"></div>
+      <div id="warn" class="warn" hidden></div>
+    </div>
+    <button id="btn-recenter" class="fab" title="Center on me">◎</button>
+    <div id="sheet" class="sheet">
+      <div class="grab" id="sheet-grab"></div>
+      <div id="sheet-body">
+        <ul id="game-players" class="plist"></ul>
+        <button id="btn-gotcaught" class="btn btn-danger" hidden>I got caught</button>
+        <h3>Feed</h3>
+        <ul id="feed" class="feed"></ul>
+        <button id="btn-end" class="btn btn-ghost btn-small" hidden>End game (host)</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- OVER -->
+  <section id="over" class="screen" hidden>
+    <div id="over-banner" class="card over-banner"></div>
+    <div id="over-map" class="map-box tall"></div>
+    <div class="card"><ul id="over-players" class="plist"></ul></div>
+    <div class="sticky-actions">
+      <button id="btn-again" class="btn">New round</button>
+      <p id="wait-again" class="muted center" hidden>Waiting for the host to start a new round…</p>
+      <button id="btn-leave2" class="btn btn-ghost btn-small">Leave room</button>
+    </div>
+  </section>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="lib/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
